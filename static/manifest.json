@@ -1,0 +1,21 @@
+{
+  "name": "Uni Sync PWA",
+  "short_name": "UniSync",
+  "description": "A PWA for syncing university data",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4A90E2",
+  "icons": [
+    {
+      "src": "/static/icons/icon.png",
+      "sizes": "100x100",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon.png",
+      "sizes": "100x100",
+      "type": "image/png"
+    }
+  ]
+}
