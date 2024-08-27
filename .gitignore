@@ -58,8 +58,6 @@ public/
 # Ignore GitHub Pages deployment folder (usually `docs` or `gh-pages`)
 docs/
 
-# Ignore the result.html template if it's generated dynamically
-templates/result.html
 
 # Ignore logs and temporary files
 *.log

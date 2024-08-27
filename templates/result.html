@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Result</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin: 50px auto;
+            max-width: 600px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+        }
+        .course {
+            margin-bottom: 20px;
+        }
+        .usernames {
+            padding-left: 20px;
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+    <div class="container">
+        <h1>Synchronization Successful</h1>
+        <p>The following data was extracted:</p>
+        {% for course in all_username_column_data %}
+            <div class="course">
+                <h2>{{ course.course_name }}</h2>
+                <div class="usernames">
+                    <ul>
+                        {% for username in course.user_name %}
+                            <li>{{ username }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>
