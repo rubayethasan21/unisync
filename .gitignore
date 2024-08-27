@@ -1,0 +1,66 @@
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment directory
+venv/
+ENV/
+env/
+.venv/
+
+# Python-specific log files
+*.log
+*.pot
+*.pyc
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# macOS specific files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# pycharm specific files
+.idea/
+
+# Ignore Playwright browser binaries and other caches
+playwright/cache/
+playwright/downloads/
+playwright-*.zip
+playwright-debug/
+playwright-trace/
+trace.zip
+
+# Environment variables
+.env
+*.env
+
+# VSCode directory
+.vscode/
+
+# Ignore node_modules if using Node.js dependencies
+node_modules/
+
+# Ignore build outputs
+dist/
+build/
+
+# Ignore files related to deployment
+*.swp
+*.swo
+*~
+
+# Ignore the public directory, which is often used by static site generators
+public/
+
+# Ignore GitHub Pages deployment folder (usually `docs` or `gh-pages`)
+docs/
+
+# Ignore the result.html template if it's generated dynamically
+templates/result.html
+
+# Ignore logs and temporary files
+*.log
+*.tmp
