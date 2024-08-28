@@ -2,7 +2,6 @@ from flask import Flask, render_template, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.utils import ChromeType
 from bs4 import BeautifulSoup
 import re
 
@@ -17,7 +16,7 @@ def create_selenium_browser():
 
     # Use Chrome WebDriver and specify the matching version
     browser = webdriver.Chrome(
-        service=Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM, version="90.0.4430.24").install()),  # Specify ChromeDriver version for Chromium 90
+        service=Service(ChromeDriverManager(version="90.0.4430.24").install()),  # Specify ChromeDriver version for Chromium 90
         options=options
     )
     return browser
@@ -77,7 +76,7 @@ def extract_username_column_from_table(html_content):
 
 def visit_course_page_and_scrape(browser, course):
     """Creates a dynamic URL for each course, navigates to it, and scrapes the content."""
-    dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['RefId']}"
+    dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['refId']}"
     print(f"Visiting dynamic URL: {dynamic_url}")
     browser.get(dynamic_url)
 
