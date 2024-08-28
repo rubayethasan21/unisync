@@ -6,17 +6,14 @@ import asyncio
 
 app = Flask(__name__)
 
-
-async def create_playwright_browser(headless=True):  # Ensure headless mode is True
-    """Creates and returns a Playwright browser instance using the system-installed Chromium."""
+async def create_playwright_browser(headless=True):
+    """Creates and returns a Playwright browser instance using Playwright's built-in Firefox."""
     playwright = await async_playwright().start()
-    browser = await playwright.chromium.launch(
-        executable_path='/usr/bin/chromium',  # Use system-installed Chromium
-        headless=headless,  # Run in headless mode to avoid X display errors
+    browser = await playwright.firefox.launch(
+        headless=headless,  # Ensure headless mode is enabled
         args=["--no-sandbox"]  # Add --no-sandbox argument to avoid potential issues in restricted environments
     )
     return browser, playwright
-
 
 async def navigate_to_login_page(page):
     """Navigates to the OpenID login page."""
@@ -111,7 +108,7 @@ def sync():
 @app.route('/perform-sync')
 async def perform_sync():
     try:
-        browser, playwright = await create_playwright_browser(headless=False)
+        browser, playwright = await create_playwright_browser(headless=True)
         page = await browser.new_page()
 
         await navigate_to_login_page(page)
