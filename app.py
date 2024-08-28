@@ -5,10 +5,17 @@ import re
 
 app = Flask(__name__)
 
-def create_playwright_browser(headless=False):
+def create_playwright_browserOld(headless=False):
     """Creates and returns a Playwright browser instance."""
     playwright = sync_playwright().start()
     browser = playwright.chromium.launch(headless=headless)
+    return browser, playwright
+
+
+def create_playwright_browser(headless=False):
+    """Creates and returns a Playwright browser instance."""
+    playwright = sync_playwright().start()
+    browser = playwright.chromium.launch(executable_path='/usr/bin/chromium-browser', headless=headless)
     return browser, playwright
 
 def navigate_to_login_page(page):
