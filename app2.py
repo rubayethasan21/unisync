@@ -1,44 +1,32 @@
 from flask import Flask, render_template, jsonify
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from bs4 import BeautifulSoup
 import re
 
 app = Flask(__name__)
 
-def create_playwright_browser(headless=False):
-    """Creates and returns a Playwright browser instance."""
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=headless)
-    return browser, playwright
+def create_selenium_browser():
+    """Creates and returns a Selenium browser instance using the system-installed ChromeDriver."""
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
+    options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
+    # Specify the path to the ChromeDriver
+    service = Service("/usr/local/bin/chromedriver")
 
-def create_playwright_browser1(headless=False):
-    """Creates and returns a Playwright browser instance."""
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(executable_path='/usr/bin/chromium-browser', headless=headless)
-    return browser, playwright
+    # Create the browser instance with the specified ChromeDriver
+    browser = webdriver.Chrome(service=service, options=options)
+    return browser
 
-def navigate_to_login_page(page):
+def navigate_to_login_page(browser):
     """Navigates to the OpenID login page."""
     login_url = ('https://login.hs-heilbronn.de/realms/hhn/protocol/openid-connect/auth'
                  '?response_mode=form_post&response_type=id_token&redirect_uri=https%3A%2F%2Filias.hs-heilbronn.de%2Fopenidconnect.php'
                  '&client_id=hhn_common_ilias&nonce=badc63032679bb541ff44ea53eeccb4e&state=2182e131aa3ed4442387157cd1823be0&scope=openid+openid')
-    page.goto(login_url)
+    browser.get(login_url)
     print("Please log in manually in the opened browser window...")
-
-def wait_for_dashboard(page):
-    """Waits until redirected to the dashboard after login."""
-    try:
-        page.wait_for_url("**/ilias.php?baseClass=ilDashboardGUI&cmd=jumpToSelectedItems",
-                          timeout=60000)  # Wait up to 60 seconds
-        print("Login successful. Redirecting to the target URL...")
-    except PlaywrightTimeoutError:
-        raise Exception("Login did not complete within the expected time.")
-
-def navigate_to_main_courses_page(page):
-    """Navigates to the main courses page after logging in."""
-    target_url = 'https://ilias.hs-heilbronn.de/ilias.php?cmdClass=ilmembershipoverviewgui&cmdNode=jr&baseClass=ilmembershipoverviewgui'
-    page.goto(target_url)
 
 def extract_courses(html_content):
     """Extracts course information from the provided HTML content."""
@@ -85,13 +73,13 @@ def extract_username_column_from_table(html_content):
 
     return username_column_data
 
-def visit_course_page_and_scrape(page, course):
+def visit_course_page_and_scrape(browser, course):
     """Creates a dynamic URL for each course, navigates to it, and scrapes the content."""
     dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['refId']}"
     print(f"Visiting dynamic URL: {dynamic_url}")
-    page.goto(dynamic_url)
+    browser.get(dynamic_url)
 
-    course_html_content = page.content()
+    course_html_content = browser.page_source
     print(f"Scraped HTML for {course['name']} at {dynamic_url}:", course_html_content)
 
     # Extract the usernames (Anmeldename) from the table
@@ -111,37 +99,39 @@ def sync():
 @app.route('/perform-sync')
 def perform_sync():
     try:
-        browser, playwright = create_playwright_browser(headless=False)
-        page = browser.new_page()
+        browser = create_selenium_browser()
 
-        navigate_to_login_page(page)
-        wait_for_dashboard(page)
-        navigate_to_main_courses_page(page)
+        navigate_to_login_page(browser)
+        # Assuming the user logs in manually; no automated wait is needed here.
 
-        html_content = page.content()
+        # After login, you should add a way to ensure the browser has redirected to the correct page.
+        # Example of waiting for a specific element to appear can be added here using WebDriverWait.
+
+        # Manually navigate to the main courses page
+        target_url = 'https://ilias.hs-heilbronn.de/ilias.php?cmdClass=ilmembershipoverviewgui&cmdNode=jr&baseClass=ilmembershipoverviewgui'
+        browser.get(target_url)
+
+        html_content = browser.page_source
         courses = extract_courses(html_content)
         print('Extracted Courses:', courses)
 
         all_username_column_data = []
         for course in courses:
-            course_html_content, usernames = visit_course_page_and_scrape(page, course)
+            course_html_content, usernames = visit_course_page_and_scrape(browser, course)
             all_username_column_data.append({
                 'course_name': course['name'],
                 'user_name': usernames
             })
 
         print('all_username_column_data', all_username_column_data)
-        browser.close()
-        playwright.stop()
+        browser.quit()
 
         # Render the result.html template with the data
         return render_template('result.html', all_username_column_data=all_username_column_data)
 
     except Exception as e:
         if 'browser' in locals():
-            browser.close()
-        if 'playwright' in locals():
-            playwright.stop()
+            browser.quit()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
