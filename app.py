@@ -1,28 +1,23 @@
 from flask import Flask, render_template, jsonify
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.utils import ChromeType
+from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
 from bs4 import BeautifulSoup
 import re
 
 app = Flask(__name__)
 
 def create_selenium_browser():
-    """Creates and returns a Selenium browser instance using the matching ChromeDriver version."""
-    options = webdriver.ChromeOptions()
+    """Creates and returns a Selenium browser instance using Firefox."""
+    options = webdriver.FirefoxOptions()
     options.add_argument("--headless")  # Run in headless mode
-    options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
-    options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
-    # Use Chrome WebDriver and specify the matching version
-    browser = webdriver.Chrome(
-        service=Service(ChromeDriverManager(version="90.0.4430.24").install()),  # Specify ChromeDriver version
+    # Use Firefox WebDriver managed by WebDriver Manager
+    browser = webdriver.Firefox(
+        service=Service(GeckoDriverManager().install()),  # Install and use GeckoDriver
         options=options
     )
     return browser
-
-# The rest of your app.py code remains unchanged
 
 def navigate_to_login_page(browser):
     """Navigates to the OpenID login page."""
@@ -111,7 +106,9 @@ def perform_sync():
         # After login, you should add a way to ensure the browser has redirected to the correct page.
         # Example of waiting for a specific element to appear can be added here using WebDriverWait.
 
-        navigate_to_main_courses_page(browser)
+        # Manually navigate to the main courses page
+        target_url = 'https://ilias.hs-heilbronn.de/ilias.php?cmdClass=ilmembershipoverviewgui&cmdNode=jr&baseClass=ilmembershipoverviewgui'
+        browser.get(target_url)
 
         html_content = browser.page_source
         courses = extract_courses(html_content)
