@@ -14,11 +14,11 @@ def create_selenium_browser():
     options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
     options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
-    # Use Chrome WebDriver and specify the matching version
-    browser = webdriver.Chrome(
-        service=Service(ChromeDriverManager(version="90.0.4430.24").install()),  # Specify ChromeDriver version for Chromium 90
-        options=options
-    )
+    # Specify the ChromeDriver version using the install method
+    service = Service(ChromeDriverManager().install())
+
+    # Create the browser instance
+    browser = webdriver.Chrome(service=service, options=options)
     return browser
 
 def navigate_to_login_page(browser):
