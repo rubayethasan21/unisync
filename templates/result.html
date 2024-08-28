@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sync Result</title>
+    <title>Course And User List</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -30,8 +30,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>Synchronization Successful</h1>
-        <p>The following data was extracted:</p>
+        <h1>Course and User List Extracted</h1>
+        <p>Course and User List:</p>
         {% for course in all_username_column_data %}
             <div class="course">
                 <h2>{{ course.course_name }}</h2>

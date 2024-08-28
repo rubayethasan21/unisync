@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Uni Sync PWA</title>
+    <title>UniSync</title>
     <!-- Link to the stylesheet -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <!-- Link to the manifest file -->
     <link rel="manifest" href="/manifest.json">
 </head>
 <body>
-    <h1>Welcome to Uni Sync PWA</h1>
-    <button id="syncButton" onclick="window.location.href='/sync'">Synchronize</button>
+    <h1>Sync Ilias Courses With Matrix Rooms</h1>
+    <button id="syncButton" onclick="window.location.href='/sync'">Sync</button>
 
     <!-- Register the service worker -->
     <script>
