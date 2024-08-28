@@ -1,20 +1,23 @@
 from flask import Flask, render_template, jsonify
 from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
-from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.utils import ChromeType
 from bs4 import BeautifulSoup
 import re
 
 app = Flask(__name__)
 
 def create_selenium_browser():
-    """Creates and returns a Selenium browser instance using Firefox."""
-    options = webdriver.FirefoxOptions()
+    """Creates and returns a Selenium browser instance using Chromium."""
+    options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode
+    options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
+    options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
-    # Use Firefox WebDriver managed by WebDriver Manager
-    browser = webdriver.Firefox(
-        service=Service(GeckoDriverManager().install()),  # Install and use GeckoDriver
+    # Use Chrome WebDriver and specify the matching version
+    browser = webdriver.Chrome(
+        service=Service(ChromeDriverManager(chrome_type=ChromeType.CHROMIUM, version="90.0.4430.24").install()),  # Specify ChromeDriver version for Chromium 90
         options=options
     )
     return browser
@@ -74,7 +77,7 @@ def extract_username_column_from_table(html_content):
 
 def visit_course_page_and_scrape(browser, course):
     """Creates a dynamic URL for each course, navigates to it, and scrapes the content."""
-    dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['refId']}"
+    dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['RefId']}"
     print(f"Visiting dynamic URL: {dynamic_url}")
     browser.get(dynamic_url)
 
