@@ -7,9 +7,12 @@ import asyncio
 app = Flask(__name__)
 
 async def create_playwright_browser(headless=False):
-    """Creates and returns a Playwright browser instance."""
+    """Creates and returns a Playwright browser instance using the system-installed Chromium."""
     playwright = await async_playwright().start()
-    browser = await playwright.chromium.launch(headless=headless)
+    browser = await playwright.chromium.launch(
+        executable_path='/usr/bin/chromium-browser',  # Use system-installed Chromium
+        headless=headless
+    )
     return browser, playwright
 
 async def navigate_to_login_page(page):
