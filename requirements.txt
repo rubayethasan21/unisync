@@ -6,7 +6,6 @@ certifi==2024.7.4
 cffi==1.17.0
 charset-normalizer==3.3.2
 click==8.1.7
-cryptography==43.0.0
 exceptiongroup==1.2.2
 execnet==2.0.2
 Flask[async]==3.0.3
@@ -14,7 +13,6 @@ greenlet==3.0.3
 h11==0.14.0
 idna==3.8
 iniconfig==2.0.0
-iota-sdk==1.0.2
 itsdangerous==2.2.0
 Jinja2==3.1.4
 kyber==0.1.0
