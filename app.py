@@ -1,25 +1,23 @@
-import os
 from flask import Flask, render_template, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
 import re
 
 app = Flask(__name__)
 
-# Set the environment variable for the ChromeDriver version
-os.environ['WDM_CHROME_DRIVER_VERSION'] = '90.0.4430.24'
-
 def create_selenium_browser():
-    """Creates and returns a Selenium browser instance using Chromium."""
+    """Creates and returns a Selenium browser instance using the system-installed ChromeDriver."""
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
     options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
-    # Use Chrome WebDriver and specify the version via environment variable
-    browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # Use the system-installed ChromeDriver
+    service = Service("/usr/local/bin/chromedriver")
+
+    # Create the browser instance with the system-installed ChromeDriver
+    browser = webdriver.Chrome(service=service, options=options)
     return browser
 
 def navigate_to_login_page(browser):
