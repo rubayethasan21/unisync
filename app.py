@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -7,18 +8,18 @@ import re
 
 app = Flask(__name__)
 
+# Set the environment variable for the ChromeDriver version
+os.environ['WDM_CHROME_DRIVER_VERSION'] = '90.0.4430.24'
+
 def create_selenium_browser():
-    """Creates and returns a Selenium browser instance using the correct version of ChromeDriver for Chromium."""
+    """Creates and returns a Selenium browser instance using Chromium."""
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
     options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
-    # Install the correct version of ChromeDriver for Chromium 90.x
-    driver_path = ChromeDriverManager(version="90.0.4430.24").install()
-
-    # Create the browser instance with the correct ChromeDriver
-    browser = webdriver.Chrome(service=Service(driver_path), options=options)
+    # Use Chrome WebDriver and specify the version via environment variable
+    browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     return browser
 
 def navigate_to_login_page(browser):
