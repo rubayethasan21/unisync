@@ -2,21 +2,27 @@ from flask import Flask, render_template, jsonify
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.utils import ChromeType
 from bs4 import BeautifulSoup
 import re
 
 app = Flask(__name__)
 
 def create_selenium_browser():
-    """Creates and returns a Selenium browser instance using Chrome WebDriver."""
+    """Creates and returns a Selenium browser instance using the matching ChromeDriver version."""
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
     options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
-    # Use Chrome WebDriver managed by WebDriver Manager
-    browser = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # Use Chrome WebDriver and specify the matching version
+    browser = webdriver.Chrome(
+        service=Service(ChromeDriverManager(version="90.0.4430.24").install()),  # Specify ChromeDriver version
+        options=options
+    )
     return browser
+
+# The rest of your app.py code remains unchanged
 
 def navigate_to_login_page(browser):
     """Navigates to the OpenID login page."""
