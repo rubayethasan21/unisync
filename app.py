@@ -8,17 +8,17 @@ import re
 app = Flask(__name__)
 
 def create_selenium_browser():
-    """Creates and returns a Selenium browser instance using Chromium."""
+    """Creates and returns a Selenium browser instance using the correct version of ChromeDriver for Chromium."""
     options = webdriver.ChromeOptions()
     options.add_argument("--headless")  # Run in headless mode
     options.add_argument("--no-sandbox")  # Required to avoid issues in some environments
     options.add_argument("--disable-dev-shm-usage")  # Overcome limited resource problems
 
-    # Specify the ChromeDriver version using the install method
-    service = Service(ChromeDriverManager().install())
+    # Install the correct version of ChromeDriver for Chromium 90.x
+    driver_path = ChromeDriverManager(version="90.0.4430.24").install()
 
-    # Create the browser instance
-    browser = webdriver.Chrome(service=service, options=options)
+    # Create the browser instance with the correct ChromeDriver
+    browser = webdriver.Chrome(service=Service(driver_path), options=options)
     return browser
 
 def navigate_to_login_page(browser):
