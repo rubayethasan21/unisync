@@ -11,5 +11,4 @@ webdriver-manager==4.0.2
 matrix-nio==0.18.5
 gunicorn==20.1.0
 playwright==1.20.0
-greenlet==1.1.2
-
+greenlet==3.0.2
