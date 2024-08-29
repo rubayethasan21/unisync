@@ -85,6 +85,25 @@ def extract_username_column_from_table(html_content):
 
     return username_column_data
 
+def extract_email_column_from_table(html_content):
+    """Extracts the email column (Anmeldename) from the table in the provided HTML content."""
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Find the table by class
+    table = soup.find('table', {'class': 'table table-striped fullwidth'})
+
+    # List to hold the username data
+    email_column_data = []
+
+    # Loop through all rows in the table body
+    for row in table.find('tbody').find_all('tr'):
+        # Get all columns (td elements)
+        columns = row.find_all('td')
+        if len(columns) >= 5:  # Ensure there are at least 5 columns
+            email_column_data.append(columns[4].text.strip())  # Extract the text from the fifth column
+
+    return email_column_data
+
 def visit_course_page_and_scrape(page, course):
     """Creates a dynamic URL for each course, navigates to it, and scrapes the content."""
     dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['refId']}"
@@ -95,10 +114,15 @@ def visit_course_page_and_scrape(page, course):
     print(f"Scraped HTML for {course['name']} at {dynamic_url}:", course_html_content)
 
     # Extract the usernames (Anmeldename) from the table
-    usernames = extract_username_column_from_table(course_html_content)
-    print(f"Username Column Data (Anmeldename) for {course['name']}:", usernames)
+    #usernames = extract_username_column_from_table(course_html_content)
+    #print(f"Username Column Data (Anmeldename) for {course['name']}:", usernames)
+    #return course_html_content, usernames
 
-    return course_html_content, usernames
+
+    emails = extract_email_column_from_table(course_html_content)
+    print(f"Email Column Data for {course['name']}:", emails)
+
+    return course_html_content, emails
 
 @app.route('/')
 def index():
@@ -122,20 +146,29 @@ def perform_sync():
         courses = extract_courses(html_content)
         print('Extracted Courses:', courses)
 
-        all_username_column_data = []
+        #all_username_column_data = []
+        all_email_column_data = []
         for course in courses:
-            course_html_content, usernames = visit_course_page_and_scrape(page, course)
-            all_username_column_data.append({
+            #course_html_content, usernames = visit_course_page_and_scrape(page, course)
+            # all_username_column_data.append({
+            #     'course_name': course['name'],
+            #     'user_name': usernames
+            # })
+
+            course_html_content, emails = visit_course_page_and_scrape(page, course)
+            all_email_column_data.append({
                 'course_name': course['name'],
-                'user_name': usernames
+                'emails': emails
             })
 
-        print('all_username_column_data', all_username_column_data)
+        #print('all_username_column_data', all_username_column_data)
+        print('all_username_column_data', all_email_column_data)
         browser.close()
         playwright.stop()
 
         # Render the result.html template with the data
-        return render_template('result.html', all_username_column_data=all_username_column_data)
+        #return render_template('result.html', all_username_column_data=all_username_column_data)
+        return render_template('result.html', all_email_column_data=all_email_column_data)
 
     except Exception as e:
         if 'browser' in locals():

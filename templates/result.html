@@ -29,7 +29,7 @@
     <link rel="manifest" href="/manifest.json">
 </head>
 <body>
-    <div class="container">
+    <!--<div class="container">
         <h1>Course and User List Extracted</h1>
         <p>Course and User List:</p>
         {% for course in all_username_column_data %}
@@ -39,6 +39,23 @@
                     <ul>
                         {% for username in course.user_name %}
                             <li>{{ username }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+-->
+    <div class="container">
+        <h1>Course and Email List Extracted</h1>
+        <p>Course and Email List:</p>
+        {% for course in all_email_column_data %}
+            <div class="course">
+                <h2>{{ course.course_name }}</h2>
+                <div class="emails">
+                    <ul>
+                        {% for email in course.emails %}
+                            <li>{{ email }}</li>
                         {% endfor %}
                     </ul>
                 </div>
