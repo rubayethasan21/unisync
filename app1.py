@@ -149,17 +149,22 @@ def perform_sync():
         #all_username_column_data = []
         all_email_column_data = []
         for course in courses:
-            #course_html_content, usernames = visit_course_page_and_scrape(page, course)
-            # all_username_column_data.append({
-            #     'course_name': course['name'],
-            #     'user_name': usernames
-            # })
+            try:
+                # course_html_content, usernames = visit_course_page_and_scrape(page, course)
+                # all_username_column_data.append({
+                #     'course_name': course['name'],
+                #     'user_name': usernames
+                # })
 
-            course_html_content, emails = visit_course_page_and_scrape(page, course)
-            all_email_column_data.append({
-                'course_name': course['name'],
-                'emails': emails
-            })
+                course_html_content, emails = visit_course_page_and_scrape(page, course)
+                all_email_column_data.append({
+                    'course_name': course['name'],
+                    'emails': emails
+                })
+            except Exception as e:
+                # If an error occurs, print it and continue with the next course
+                print(f"An error occurred while processing course {course['name']}: {e}")
+                continue
 
         #print('all_username_column_data', all_username_column_data)
         print('all_username_column_data', all_email_column_data)
