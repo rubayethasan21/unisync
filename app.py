@@ -121,7 +121,9 @@ def index():
 
 @app.route('/sync')
 def sync():
-    return render_template('login.html')
+    return render_template('sync.html')
+
+    #return render_template('login.html')
 
 
 @app.route('/perform-sync')

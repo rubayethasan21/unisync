@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync</title>
+</head>
+<body>
+    <h1>Sync Your Courses</h1>
+
+    <button onclick="syncCourses()">Sync</button>
+
+    <script>
+        function syncCourses() {
+            // The login page URL you want to open on the client-side
+            const loginUrl = 'https://login.hs-heilbronn.de/realms/hhn/protocol/openid-connect/auth?response_mode=form_post&response_type=id_token&redirect_uri=https%3A%2F%2Filias.hs-heilbronn.de%2Fopenidconnect.php&client_id=hhn_common_ilias&nonce=badc63032679bb541ff44ea53eeccb4e&state=2182e131aa3ed4442387157cd1823be0&scope=openid+openid';
+
+            // Open the login page in a new tab
+            window.open(loginUrl, '_blank');
+        }
+    </script>
+</body>
+</html>
