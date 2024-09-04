@@ -6,12 +6,11 @@ import re
 app = Flask(__name__)
 
 def create_playwright_browser(headless=False):
-    """Creates and returns a Playwright browser instance with logging and arguments."""
+    """Creates and returns a Playwright browser instance."""
     playwright = sync_playwright().start()
     browser = playwright.chromium.launch(
         headless=headless,
-        args=["--disable-gpu", "--no-sandbox"],  # Ensure it's optimized for headless servers
-        logLevel="trace"  # Enable detailed logging for debugging
+        args=["--disable-gpu", "--no-sandbox"]  # Optimized for headless servers
     )
     return browser, playwright
 
