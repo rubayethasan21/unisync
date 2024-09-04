@@ -136,8 +136,8 @@ def sync():
 def perform_sync():
     print('perform_sync method')
     try:
-        #browser, playwright = create_playwright_browser(headless=False)
-        browser, playwright = create_playwright_browser(headless=True)
+        browser, playwright = create_playwright_browser(headless=False)
+        #browser, playwright = create_playwright_browser(headless=True)
 
         page = browser.new_page()
 
@@ -160,10 +160,22 @@ def perform_sync():
                 # })
 
                 course_html_content, emails = visit_course_page_and_scrape(page, course)
-                all_email_column_data.append({
-                    'course_name': course['name'],
-                    'emails': emails
-                })
+                # all_email_column_data.append(
+                #     {
+                #         'course_name': course['name'],
+                #         'emails': emails
+                #     }
+                # )
+
+                all_email_column_data.append(
+                    {
+                        'course_name': course['name'],
+                        'course_id': course['refId'],
+                        'students': emails
+                    }
+                )
+
+
             except Exception as e:
                 # If an error occurs, print it and continue with the next course
                 print(f"An error occurred while processing course {course['name']}: {e}")
@@ -171,6 +183,15 @@ def perform_sync():
 
         #print('all_username_column_data', all_username_column_data)
         print('all_username_column_data', all_email_column_data)
+
+        final_data = {
+            "classrooms": all_email_column_data
+        }
+
+        print('final_data', final_data)
+
+
+
         browser.close()
         playwright.stop()
 
