@@ -6,13 +6,16 @@ import re
 app = Flask(__name__)
 
 def create_playwright_browser(headless=False):
-    """Creates and returns a Playwright browser instance with logging and arguments."""
+    """Creates and returns a Playwright browser instance."""
     playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(
-        headless=headless,
-        args=["--disable-gpu", "--no-sandbox"],  # Ensure it's optimized for headless servers
-        logLevel="trace"  # Enable detailed logging for debugging
-    )
+    browser = playwright.chromium.launch(headless=headless)
+    return browser, playwright
+
+
+def create_playwright_browser1(headless=False):
+    """Creates and returns a Playwright browser instance."""
+    playwright = sync_playwright().start()
+    browser = playwright.chromium.launch(executable_path='/usr/bin/chromium-browser', headless=headless)
     return browser, playwright
 
 def navigate_to_login_page(page):
@@ -21,13 +24,13 @@ def navigate_to_login_page(page):
                  '?response_mode=form_post&response_type=id_token&redirect_uri=https%3A%2F%2Filias.hs-heilbronn.de%2Fopenidconnect.php'
                  '&client_id=hhn_common_ilias&nonce=badc63032679bb541ff44ea53eeccb4e&state=2182e131aa3ed4442387157cd1823be0&scope=openid+openid')
     page.goto(login_url)
-    print("Navigated to login page, waiting for user interaction...")
+    print("Please log in manually in the opened browser window...")
 
 def wait_for_dashboard(page):
     """Waits until redirected to the dashboard after login."""
     try:
         page.wait_for_url("**/ilias.php?baseClass=ilDashboardGUI&cmd=jumpToSelectedItems",
-                          timeout=120000)  # Increase timeout to 120 seconds
+                          timeout=60000)  # Wait up to 60 seconds
         print("Login successful. Redirecting to the target URL...")
     except PlaywrightTimeoutError:
         raise Exception("Login did not complete within the expected time.")
@@ -63,14 +66,33 @@ def extract_courses(html_content):
 
     return courses
 
-def extract_email_column_from_table(html_content):
-    """Extracts the email column from the table in the provided HTML content."""
+def extract_username_column_from_table(html_content):
+    """Extracts the username column (Anmeldename) from the table in the provided HTML content."""
     soup = BeautifulSoup(html_content, 'html.parser')
 
     # Find the table by class
     table = soup.find('table', {'class': 'table table-striped fullwidth'})
 
-    # List to hold the email data
+    # List to hold the username data
+    username_column_data = []
+
+    # Loop through all rows in the table body
+    for row in table.find('tbody').find_all('tr'):
+        # Get all columns (td elements)
+        columns = row.find_all('td')
+        if len(columns) >= 3:  # Ensure there are at least 3 columns
+            username_column_data.append(columns[2].text.strip())  # Extract the text from the third column
+
+    return username_column_data
+
+def extract_email_column_from_table(html_content):
+    """Extracts the email column (Anmeldename) from the table in the provided HTML content."""
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Find the table by class
+    table = soup.find('table', {'class': 'table table-striped fullwidth'})
+
+    # List to hold the username data
     email_column_data = []
 
     # Loop through all rows in the table body
@@ -89,7 +111,13 @@ def visit_course_page_and_scrape(page, course):
     page.goto(dynamic_url)
 
     course_html_content = page.content()
-    print(f"Scraped HTML for {course['name']} at {dynamic_url}")
+    print(f"Scraped HTML for {course['name']} at {dynamic_url}:", course_html_content)
+
+    # Extract the usernames (Anmeldename) from the table
+    #usernames = extract_username_column_from_table(course_html_content)
+    #print(f"Username Column Data (Anmeldename) for {course['name']}:", usernames)
+    #return course_html_content, usernames
+
 
     emails = extract_email_column_from_table(course_html_content)
     print(f"Email Column Data for {course['name']}:", emails)
@@ -106,47 +134,51 @@ def sync():
 
 @app.route('/perform-sync')
 def perform_sync():
-    print('Starting perform_sync method')
+    print('perform_sync method')
     try:
-        browser, playwright = create_playwright_browser(headless=True)  # Headless mode enabled
+        #browser, playwright = create_playwright_browser(headless=False)
+        browser, playwright = create_playwright_browser(headless=True)
 
         page = browser.new_page()
 
-        print("Navigating to login page...")
         navigate_to_login_page(page)
-
-        print("Waiting for dashboard...")
         wait_for_dashboard(page)
-
-        print("Navigating to main courses page...")
         navigate_to_main_courses_page(page)
 
         html_content = page.content()
         courses = extract_courses(html_content)
         print('Extracted Courses:', courses)
 
+        #all_username_column_data = []
         all_email_column_data = []
         for course in courses:
             try:
-                print(f"Visiting course page: {course['name']}")
+                # course_html_content, usernames = visit_course_page_and_scrape(page, course)
+                # all_username_column_data.append({
+                #     'course_name': course['name'],
+                #     'user_name': usernames
+                # })
+
                 course_html_content, emails = visit_course_page_and_scrape(page, course)
                 all_email_column_data.append({
                     'course_name': course['name'],
                     'emails': emails
                 })
             except Exception as e:
+                # If an error occurs, print it and continue with the next course
                 print(f"An error occurred while processing course {course['name']}: {e}")
                 continue
 
-        print('All extracted email data:', all_email_column_data)
-
+        #print('all_username_column_data', all_username_column_data)
+        print('all_username_column_data', all_email_column_data)
         browser.close()
         playwright.stop()
 
+        # Render the result.html template with the data
+        #return render_template('result.html', all_username_column_data=all_username_column_data)
         return render_template('result.html', all_email_column_data=all_email_column_data)
 
     except Exception as e:
-        print(f"Error during sync: {e}")
         if 'browser' in locals():
             browser.close()
         if 'playwright' in locals():
