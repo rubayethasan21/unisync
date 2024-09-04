@@ -136,7 +136,9 @@ def sync():
 def perform_sync():
     print('perform_sync method')
     try:
-        browser, playwright = create_playwright_browser(headless=False)
+        #browser, playwright = create_playwright_browser(headless=False)
+        browser, playwright = create_playwright_browser(headless=True)
+
         page = browser.new_page()
 
         navigate_to_login_page(page)
