@@ -2,15 +2,24 @@ from flask import Flask, render_template, jsonify
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from bs4 import BeautifulSoup
 import re
+from nio import AsyncClient, LoginResponse
+import asyncio
 
 app = Flask(__name__)
+
+# Matrix configuration
+MATRIX_SERVER = "https://matrix.org"  # Replace with your Matrix server URL
+MATRIX_USERNAME = "@yourusername:matrix.org"  # Replace with your Matrix username
+MATRIX_PASSWORD = "yourpassword"  # Replace with your Matrix password
+
+# Initialize the Matrix client
+matrix_client = AsyncClient(MATRIX_SERVER, MATRIX_USERNAME)
 
 def create_playwright_browser(headless=False):
     """Creates and returns a Playwright browser instance."""
     playwright = sync_playwright().start()
     browser = playwright.chromium.launch(headless=headless)
     return browser, playwright
-
 
 def create_playwright_browser1(headless=False):
     """Creates and returns a Playwright browser instance."""
@@ -118,11 +127,51 @@ def visit_course_page_and_scrape(page, course):
     #print(f"Username Column Data (Anmeldename) for {course['name']}:", usernames)
     #return course_html_content, usernames
 
-
     emails = extract_email_column_from_table(course_html_content)
     print(f"Email Column Data for {course['name']}:", emails)
 
     return course_html_content, emails
+
+# ========== Matrix Integration ========== #
+
+async def matrix_login():
+    """Handles login to the Matrix server."""
+    if not matrix_client.logged_in:
+        response = await matrix_client.login(MATRIX_PASSWORD)
+        if not isinstance(response, LoginResponse):
+            raise Exception("Matrix login failed")
+
+async def create_room_and_add_members(course_name, emails):
+    """Creates a room with the course_name and adds the emails as members."""
+    try:
+        await matrix_login()
+
+        # Create a new room with the course name as the room name
+        create_room_response = await matrix_client.room_create(
+            name=course_name,
+            preset="public_chat",  # or "private_chat" depending on your needs
+            visibility="private",  # or "public" depending on your needs
+            invite=emails  # Invite all users when creating the room
+        )
+
+        if not create_room_response.room_id:
+            raise Exception(f"Failed to create room for course {course_name}")
+
+        room_id = create_room_response.room_id
+        print(f"Room created: {course_name} with ID {room_id}")
+
+        # Send an introductory message to the room
+        await matrix_client.room_send(
+            room_id,
+            message_type="m.room.message",
+            content={"msgtype": "m.text", "body": f"Welcome to the course room for {course_name}!"}
+        )
+
+        return room_id
+
+    except Exception as e:
+        print(f"Error creating room or adding members for course {course_name}: {str(e)}")
+        return None
 
 @app.route('/')
 def index():
@@ -161,13 +210,19 @@ def perform_sync():
                     'course_name': course['name'],
                     'emails': emails
                 })
+
+                # Create Matrix room and add members
+                room_id = asyncio.run(create_room_and_add_members(course['name'], emails))
+                if room_id:
+                    print(f"Successfully created room {course['name']} with ID {room_id}")
+
             except Exception as e:
                 # If an error occurs, print it and continue with the next course
                 print(f"An error occurred while processing course {course['name']}: {e}")
                 continue
 
         #print('all_username_column_data', all_username_column_data)
-        print('all_username_column_data', all_email_column_data)
+        print('all_email_column_data', all_email_column_data)
         browser.close()
         playwright.stop()
 
