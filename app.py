@@ -11,7 +11,6 @@ import os
 
 app = Flask(__name__)
 
-
 def create_selenium_browser(headless=False):
     """Creates and returns a Selenium WebDriver instance."""
     chrome_options = webdriver.ChromeOptions()
@@ -22,7 +21,6 @@ def create_selenium_browser(headless=False):
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     return driver
-
 
 def navigate_to_login_page(driver):
     """Navigates to the OpenID login page."""
@@ -41,7 +39,6 @@ def navigate_to_login_page(driver):
     if "login.hs-heilbronn.de" not in driver.current_url:
         raise Exception("Failed to navigate to the login page")
 
-
 def wait_for_dashboard(driver):
     """Waits until redirected to the dashboard after login."""
     try:
@@ -49,7 +46,6 @@ def wait_for_dashboard(driver):
         print("Login successful. Redirecting to the target URL...")
     except Exception as e:
         raise Exception("Login did not complete within the expected time.")
-
 
 def extract_courses(html_content):
     """Extracts course information from the provided HTML content."""
@@ -77,7 +73,6 @@ def extract_courses(html_content):
 
     return courses
 
-
 def visit_course_page_and_scrape(driver, course):
     """Creates a dynamic URL for each course, navigates to it, and scrapes the content."""
     dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['refId']}"
@@ -92,7 +87,6 @@ def visit_course_page_and_scrape(driver, course):
     print(f"Email Column Data for {course['name']}:", emails)
 
     return course_html_content, emails
-
 
 def extract_email_column_from_table(html_content):
     """Extracts the email column from the table in the provided HTML content."""
@@ -113,18 +107,13 @@ def extract_email_column_from_table(html_content):
 
     return email_column_data
 
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
 @app.route('/sync')
 def sync():
     return render_template('sync.html')
-
-    #return render_template('login.html')
-
 
 @app.route('/perform-sync')
 def perform_sync():
@@ -168,7 +157,6 @@ def perform_sync():
         if 'driver' in locals():
             driver.quit()
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True)
