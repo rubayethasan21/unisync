@@ -6,7 +6,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
-import time
 import os
 
 app = Flask(__name__)
@@ -18,6 +17,7 @@ def create_selenium_browser(headless=False):
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")  # For server environments
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     return driver
@@ -113,13 +113,13 @@ def index():
 
 @app.route('/sync')
 def sync():
-    return render_template('sync.html')
+    return render_template('login.html')
 
 @app.route('/perform-sync')
 def perform_sync():
     print('Starting perform_sync method')
     try:
-        # Set headless=True for production, False for testing/debugging
+        # Run with headless=True in server environments
         driver = create_selenium_browser(headless=False)
 
         navigate_to_login_page(driver)
