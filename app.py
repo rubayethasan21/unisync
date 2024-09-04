@@ -1,43 +1,55 @@
 from flask import Flask, render_template, jsonify
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 from bs4 import BeautifulSoup
+import time
 import os
-import re
 
 app = Flask(__name__)
 
-def create_playwright_browser(headless=False):
-    """Creates and returns a Playwright browser instance."""
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=headless)
-    return browser, playwright
 
-def navigate_to_login_page(page):
-    """Navigates to the OpenID login page and takes a screenshot for debugging."""
+def create_selenium_browser(headless=False):
+    """Creates and returns a Selenium WebDriver instance."""
+    chrome_options = webdriver.ChromeOptions()
+    if headless:
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    return driver
+
+
+def navigate_to_login_page(driver):
+    """Navigates to the OpenID login page."""
     login_url = ('https://login.hs-heilbronn.de/realms/hhn/protocol/openid-connect/auth'
                  '?response_mode=form_post&response_type=id_token&redirect_uri=https%3A%2F%2Filias.hs-heilbronn.de%2Fopenidconnect.php'
                  '&client_id=hhn_common_ilias&nonce=badc63032679bb541ff44ea53eeccb4e&state=2182e131aa3ed4442387157cd1823be0&scope=openid+openid')
 
-    page.goto(login_url)
-    print(f"Navigated to login page, current URL: {page.url}")
+    driver.get(login_url)
+    print(f"Navigated to login page, current URL: {driver.current_url}")
 
     # Take a screenshot for debugging
     screenshot_path = os.path.join(os.getcwd(), 'login_page_screenshot.png')
-    page.screenshot(path=screenshot_path)
+    driver.save_screenshot(screenshot_path)
     print(f"Screenshot saved at {screenshot_path}")
 
-    # Check if successfully navigated to login page
-    if "login.hs-heilbronn.de" not in page.url:
+    if "login.hs-heilbronn.de" not in driver.current_url:
         raise Exception("Failed to navigate to the login page")
 
-def wait_for_dashboard(page):
+
+def wait_for_dashboard(driver):
     """Waits until redirected to the dashboard after login."""
     try:
-        page.wait_for_url("**/ilias.php?baseClass=ilDashboardGUI&cmd=jumpToSelectedItems",
-                          timeout=60000)  # Wait up to 60 seconds
+        WebDriverWait(driver, 60).until(EC.url_contains("ilias.php?baseClass=ilDashboardGUI&cmd=jumpToSelectedItems"))
         print("Login successful. Redirecting to the target URL...")
-    except PlaywrightTimeoutError:
+    except Exception as e:
         raise Exception("Login did not complete within the expected time.")
+
 
 def extract_courses(html_content):
     """Extracts course information from the provided HTML content."""
@@ -65,13 +77,14 @@ def extract_courses(html_content):
 
     return courses
 
-def visit_course_page_and_scrape(page, course):
+
+def visit_course_page_and_scrape(driver, course):
     """Creates a dynamic URL for each course, navigates to it, and scrapes the content."""
     dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['refId']}"
     print(f"Visiting dynamic URL: {dynamic_url}")
-    page.goto(dynamic_url)
+    driver.get(dynamic_url)
 
-    course_html_content = page.content()
+    course_html_content = driver.page_source
     print(f"Scraped HTML for {course['name']} at {dynamic_url}:", course_html_content)
 
     # Extract the emails from the table
@@ -79,6 +92,7 @@ def visit_course_page_and_scrape(page, course):
     print(f"Email Column Data for {course['name']}:", emails)
 
     return course_html_content, emails
+
 
 def extract_email_column_from_table(html_content):
     """Extracts the email column from the table in the provided HTML content."""
@@ -99,31 +113,32 @@ def extract_email_column_from_table(html_content):
 
     return email_column_data
 
+
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/sync')
 def sync():
     return render_template('login.html')
 
+
 @app.route('/perform-sync')
 def perform_sync():
     print('Starting perform_sync method')
     try:
-        # Run in non-headless mode for testing/debugging (use headless=True in production)
-        browser, playwright = create_playwright_browser(headless=False)
+        # Set headless=True for production, False for testing/debugging
+        driver = create_selenium_browser(headless=False)
 
-        page = browser.new_page()
-
-        navigate_to_login_page(page)
-        wait_for_dashboard(page)
+        navigate_to_login_page(driver)
+        wait_for_dashboard(driver)
 
         # Navigate to main courses page
         target_url = 'https://ilias.hs-heilbronn.de/ilias.php?cmdClass=ilmembershipoverviewgui&cmdNode=jr&baseClass=ilmembershipoverviewgui'
-        page.goto(target_url)
+        driver.get(target_url)
 
-        html_content = page.content()
+        html_content = driver.page_source
         courses = extract_courses(html_content)
         print('Extracted Courses:', courses)
 
@@ -131,7 +146,7 @@ def perform_sync():
         all_email_column_data = []
         for course in courses:
             try:
-                course_html_content, emails = visit_course_page_and_scrape(page, course)
+                course_html_content, emails = visit_course_page_and_scrape(driver, course)
                 all_email_column_data.append({
                     'course_name': course['name'],
                     'emails': emails
@@ -141,18 +156,17 @@ def perform_sync():
                 continue
 
         print('Collected Email Data:', all_email_column_data)
-        browser.close()
-        playwright.stop()
+        driver.quit()
 
         # Render the result template
         return render_template('result.html', all_email_column_data=all_email_column_data)
 
     except Exception as e:
-        if 'browser' in locals():
-            browser.close()
-        if 'playwright' in locals():
-            playwright.stop()
+        print(f"Error in perform_sync: {e}")
+        if 'driver' in locals():
+            driver.quit()
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
