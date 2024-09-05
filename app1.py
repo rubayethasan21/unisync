@@ -2,12 +2,8 @@ from flask import Flask, render_template, jsonify
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from bs4 import BeautifulSoup
 import re
-import asyncio
-from nio import AsyncClient, MatrixRoom, RoomMessageText
 
 app = Flask(__name__)
-
-# Define a function to send the final data to the Matrix server
 
 def create_playwright_browser(headless=False):
     """Creates and returns a Playwright browser instance."""
