@@ -15,8 +15,8 @@ def send_data_to_matrix_server():
     url = "http://unifyhn.de/add_user_to_rooms"
     headers = {"Content-Type": "application/json"}
     data = {
-        "user_id": "@demo_user_2:unifyhn.de",
-        "rooms": [{"room_name": "DemoRoom101"}]
+        "user_id": "@demo_user_1:unifyhn.de",
+        "rooms": [{"room_name": "DemoRoom500"}]
     }
     response = requests.post(url, json=data, headers=headers)
     return response
