@@ -4,10 +4,22 @@ from bs4 import BeautifulSoup
 import re
 import asyncio
 from nio import AsyncClient, MatrixRoom, RoomMessageText
+import requests  # Import the requests library
+
 
 app = Flask(__name__)
 
 # Define a function to send the final data to the Matrix server
+def send_data_to_matrix_server():
+    """Sends a POST request to the Matrix server."""
+    url = "http://unifyhn.de/add_user_to_rooms"
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "user_id": "@demo_user_2:unifyhn.de",
+        "rooms": [{"room_name": "DemoRoom101"}]
+    }
+    response = requests.post(url, json=data, headers=headers)
+    return response
 
 def create_playwright_browser(headless=False):
     """Creates and returns a Playwright browser instance."""
@@ -130,6 +142,8 @@ def visit_course_page_and_scrape(page, course):
 
 @app.route('/')
 def index():
+    response = send_data_to_matrix_server()
+    print('response1',response)
     return render_template('index.html')
 
 @app.route('/sync')
