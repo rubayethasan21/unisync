@@ -142,6 +142,10 @@ def visit_course_page_and_scrape(page, course):
 
 @app.route('/')
 def index():
+    return render_template('index.html')
+
+@app.route('/sync')
+def sync():
     response = send_data_to_matrix_server()
     # Print response status code
     print('Response Status Code:', response.status_code)
@@ -154,10 +158,7 @@ def index():
         print('Response JSON Content:', response.json())
     except ValueError:
         print('Response is not in JSON format')
-    return render_template('index.html')
 
-@app.route('/sync')
-def sync():
     return render_template('login.html')
 
 @app.route('/perform-sync')
