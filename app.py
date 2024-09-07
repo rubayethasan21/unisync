@@ -148,16 +148,16 @@ def index():
 def sync():
     response = send_data_to_matrix_server()
     # Print response status code
-    print('Response Status Code:', response.status_code)
+    print('Response Status Code:', response.status_code, flush=True)
 
     # Print response text
-    print('Response Content:', response.text)
+    print('Response Content:', response.text, flush=True)
 
     # Print response JSON content (if JSON response)
     try:
-        print('Response JSON Content:', response.json())
+        print('Response JSON Content:', response.json(), flush=True)
     except ValueError:
-        print('Response is not in JSON format')
+        print('Response is not in JSON format', flush=True)
 
     return render_template('login.html')
 
