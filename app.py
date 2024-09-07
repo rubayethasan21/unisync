@@ -10,13 +10,13 @@ import requests  # Import the requests library
 app = Flask(__name__)
 
 # Define a function to send the final data to the Matrix server
-def send_data_to_matrix_server():
+def send_data_to_matrix_server(user_id,room_name):
     """Sends a POST request to the Matrix server."""
     url = "http://unifyhn.de/add_user_to_rooms"
     headers = {"Content-Type": "application/json"}
     data = {
-        "user_id": "@demo_user_1:unifyhn.de",
-        "rooms": [{"room_name": "DemoRoom500"}]
+        "user_id": "@"+user_id+":unifyhn.de",
+        "rooms": [{"room_name": room_name}]
     }
     response = requests.post(url, json=data, headers=headers)
     return response
@@ -146,7 +146,7 @@ def index():
 
 @app.route('/sync')
 def sync():
-    response = send_data_to_matrix_server()
+    response = send_data_to_matrix_server('demo_user_1','DemoRoom500')
     # Print response status code
     print('Response Status Code:', response.status_code, flush=True)
 
