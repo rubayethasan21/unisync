@@ -129,7 +129,7 @@ def perform_sync():
         return jsonify({"status": "error", "message": "Username and password are required"}), 400
 
     try:
-        browser, playwright = create_playwright_browser(headless=False)
+        browser, playwright = create_playwright_browser(headless=True)
         page = browser.new_page()
         session_id = base64.urlsafe_b64encode(username.encode()).decode()
         session_data[session_id] = {
