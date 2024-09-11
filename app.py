@@ -1,63 +1,57 @@
-from flask import Flask, render_template, jsonify
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
-from bs4 import BeautifulSoup
+import base64
 import re
-import asyncio
-from nio import AsyncClient, MatrixRoom, RoomMessageText
-import requests  # Import the requests library
+from pydantic import BaseModel
+import requests
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+from bs4 import BeautifulSoup
 
+app = FastAPI()
 
-app = Flask(__name__)
+# Setup templates and static files
+templates = Jinja2Templates(directory="templates")
 
-# Define a function to send the final data to the Matrix server
-def send_data_to_matrix_server(user_id,room_name):
-    """Sends a POST request to the Matrix server."""
-    url = "http://unifyhn.de/add_user_to_rooms"
-    headers = {"Content-Type": "application/json"}
-    data = {
-        "user_id": "@"+user_id+":unifyhn.de",
-        "rooms": [{"room_name": room_name}]
-    }
-    response = requests.post(url, json=data, headers=headers)
-    return response
+session_data = {}
 
-def create_playwright_browser(headless=False):
-    """Creates and returns a Playwright browser instance."""
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(headless=headless)
+async def create_playwright_browser(headless=True):
+    playwright = await async_playwright().start()
+    browser = await playwright.chromium.launch(headless=headless)
     return browser, playwright
 
+async def capture_screenshot(session_id):
+    if session_id not in session_data:
+        return None
+    if session_data[session_id].get("page"):
+        session_data[session_id]['screenshot'] = await session_data[session_id]["page"].screenshot()
 
-def create_playwright_browser1(headless=False):
-    """Creates and returns a Playwright browser instance."""
-    playwright = sync_playwright().start()
-    browser = playwright.chromium.launch(executable_path='/usr/bin/chromium-browser', headless=headless)
-    return browser, playwright
-
-def navigate_to_login_page(page):
-    """Navigates to the OpenID login page."""
+async def navigate_to_login_page(username, password, session_id):
     login_url = ('https://login.hs-heilbronn.de/realms/hhn/protocol/openid-connect/auth'
                  '?response_mode=form_post&response_type=id_token&redirect_uri=https%3A%2F%2Filias.hs-heilbronn.de%2Fopenidconnect.php'
                  '&client_id=hhn_common_ilias&nonce=badc63032679bb541ff44ea53eeccb4e&state=2182e131aa3ed4442387157cd1823be0&scope=openid+openid')
-    page.goto(login_url)
-    print("Please log in manually in the opened browser window...")
+    await session_data[session_id]['page'].goto(login_url)
+    await session_data[session_id]['page'].fill('input[name="username"]', username)
+    await session_data[session_id]['page'].fill('input[name="password"]', password)
+    await session_data[session_id]['page'].click('input[name="login"]')
+    await session_data[session_id]['page'].wait_for_selector('a[id="try-another-way"]', timeout=6000)
+    await session_data[session_id]['page'].click('a[id="try-another-way"]')
+    await session_data[session_id]['page'].wait_for_selector("button[name='authenticationExecution']:has-text('Enter a verification code from authenticator application.')", timeout=6000)
+    await session_data[session_id]['page'].click("button[name='authenticationExecution']:has-text('Enter a verification code from authenticator application.')")
 
-def wait_for_dashboard(page):
+async def wait_for_dashboard(page):
     """Waits until redirected to the dashboard after login."""
     try:
-        page.wait_for_url("**/ilias.php?baseClass=ilDashboardGUI&cmd=jumpToSelectedItems",
-                          timeout=60000)  # Wait up to 60 seconds
+        await page.wait_for_url("**/ilias.php?baseClass=ilDashboardGUI&cmd=jumpToSelectedItems", timeout=60000)  # Wait up to 60 seconds
         print("Login successful. Redirecting to the target URL...")
     except PlaywrightTimeoutError:
         raise Exception("Login did not complete within the expected time.")
 
-def navigate_to_main_courses_page(page):
-    """Navigates to the main courses page after logging in."""
+async def navigate_to_main_courses_page(page):
     target_url = 'https://ilias.hs-heilbronn.de/ilias.php?cmdClass=ilmembershipoverviewgui&cmdNode=jr&baseClass=ilmembershipoverviewgui'
-    page.goto(target_url)
+    await page.goto(target_url)
 
 def extract_courses(html_content):
-    """Extracts course information from the provided HTML content."""
     soup = BeautifulSoup(html_content, 'html.parser')
     courses = []
 
@@ -82,159 +76,163 @@ def extract_courses(html_content):
 
     return courses
 
-def extract_username_column_from_table(html_content):
-    """Extracts the username column (Anmeldename) from the table in the provided HTML content."""
-    soup = BeautifulSoup(html_content, 'html.parser')
-
-    # Find the table by class
-    table = soup.find('table', {'class': 'table table-striped fullwidth'})
-
-    # List to hold the username data
-    username_column_data = []
-
-    # Loop through all rows in the table body
-    for row in table.find('tbody').find_all('tr'):
-        # Get all columns (td elements)
-        columns = row.find_all('td')
-        if len(columns) >= 3:  # Ensure there are at least 3 columns
-            username_column_data.append(columns[2].text.strip())  # Extract the text from the third column
-
-    return username_column_data
-
 def extract_email_column_from_table(html_content):
-    """Extracts the email column (Anmeldename) from the table in the provided HTML content."""
     soup = BeautifulSoup(html_content, 'html.parser')
-
-    # Find the table by class
     table = soup.find('table', {'class': 'table table-striped fullwidth'})
-
-    # List to hold the username data
     email_column_data = []
 
-    # Loop through all rows in the table body
-    for row in table.find('tbody').find_all('tr'):
-        # Get all columns (td elements)
-        columns = row.find_all('td')
-        if len(columns) >= 5:  # Ensure there are at least 5 columns
-            email_column_data.append(columns[4].text.strip())  # Extract the text from the fifth column
+    if table and table.find('tbody'):
+        for row in table.find('tbody').find_all('tr'):
+            columns = row.find_all('td')
+            if len(columns) >= 5:
+                email_column_data.append(columns[4].text.strip())
 
     return email_column_data
 
-def visit_course_page_and_scrape(page, course):
-    """Creates a dynamic URL for each course, navigates to it, and scrapes the content."""
+def send_data_to_matrix_server(user_id, room_name):
+    url = "http://unifyhn.de/add_user_to_rooms"
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "user_id": "@" + user_id + ":unifyhn.de",
+        "rooms": [{"room_name": room_name}]
+    }
+    response = requests.post(url, json=data, headers=headers)
+    return response
+
+async def visit_course_page_and_scrape(page, course):
     dynamic_url = f"https://ilias.hs-heilbronn.de/ilias.php?baseClass=ilrepositorygui&cmdNode=yc:ml:95&cmdClass=ilCourseMembershipGUI&ref_id={course['refId']}"
     print(f"Visiting dynamic URL: {dynamic_url}")
-    page.goto(dynamic_url)
+    await page.goto(dynamic_url)
 
-    course_html_content = page.content()
-    print(f"Scraped HTML for {course['name']} at {dynamic_url}:", course_html_content)
-
-    # Extract the usernames (Anmeldename) from the table
-    #usernames = extract_username_column_from_table(course_html_content)
-    #print(f"Username Column Data (Anmeldename) for {course['name']}:", usernames)
-    #return course_html_content, usernames
-
-
+    course_html_content = await page.content()
     emails = extract_email_column_from_table(course_html_content)
     print(f"Email Column Data for {course['name']}:", emails)
 
     return course_html_content, emails
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+@app.get("/")
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
-@app.route('/sync')
-def sync():
-    response = send_data_to_matrix_server('demo_user_1','DemoRoom500')
-    # Print response status code
+@app.get("/sync", response_class=HTMLResponse)
+async def sync(request: Request):
+    response = send_data_to_matrix_server('demo_user_1', 'DemoRoom500')
     print('Response Status Code:', response.status_code, flush=True)
-
-    # Print response text
     print('Response Content:', response.text, flush=True)
-
-    # Print response JSON content (if JSON response)
     try:
         print('Response JSON Content:', response.json(), flush=True)
     except ValueError:
         print('Response is not in JSON format', flush=True)
+    return templates.TemplateResponse("login.html", {"request": request})
 
-    return render_template('login.html')
-
-@app.route('/perform-sync')
-def perform_sync():
-    print('perform_sync method')
+async def perform_sync_thread(session_id, username, password):
     try:
-        browser, playwright = create_playwright_browser(headless=False)
-        #browser, playwright = create_playwright_browser(headless=True)
-
-        page = browser.new_page()
-
-        navigate_to_login_page(page)
-        wait_for_dashboard(page)
-        navigate_to_main_courses_page(page)
-
-        html_content = page.content()
-        courses = extract_courses(html_content)
-        print('Extracted Courses:', courses)
-
-        #all_username_column_data = []
-        all_email_column_data = []
-        for course in courses:
-            try:
-                # course_html_content, usernames = visit_course_page_and_scrape(page, course)
-                # all_username_column_data.append({
-                #     'course_name': course['name'],
-                #     'user_name': usernames
-                # })
-
-                course_html_content, emails = visit_course_page_and_scrape(page, course)
-                # all_email_column_data.append(
-                #     {
-                #         'course_name': course['name'],
-                #         'emails': emails
-                #     }
-                # )
-
-                all_email_column_data.append(
-                    {
-                        'course_name': course['name'],
-                        'course_id': course['refId'],
-                        'students': emails
-                    }
-                )
-
-
-            except Exception as e:
-                # If an error occurs, print it and continue with the next course
-                print(f"An error occurred while processing course {course['name']}: {e}")
-                continue
-
-        #print('all_username_column_data', all_username_column_data)
-        print('all_username_column_data', all_email_column_data)
-
-        final_data = {
-            "classrooms": all_email_column_data
+        browser, playwright = await create_playwright_browser(headless=False)
+        page = await browser.new_page()
+        session_data[session_id] = {
+            'browser': browser,
+            'page': page,
+            'playwright': playwright,
+            'screenshot': None,
+            'otp_required': False
         }
+        await capture_screenshot(session_id)
+        await navigate_to_login_page(username, password, session_id)
+        await capture_screenshot(session_id)
 
-        print('final_data', final_data)
-
-
-
-
-        browser.close()
-        playwright.stop()
-
-        # Render the result.html template with the data
-        #return render_template('result.html', all_username_column_data=all_username_column_data)
-        return render_template('result.html', all_email_column_data=all_email_column_data)
-
+        # Check for OTP field
+        try:
+            await session_data[session_id]["page"].wait_for_selector('input[name="otp"]', timeout=3000)
+            session_data[session_id]['otp_required'] = True
+        except PlaywrightTimeoutError:
+            await cleanup_session(session_id)
+            print("Login failed: Invalid credentials")
+        print(f"Thread {session_id} completed initial sync.")
     except Exception as e:
-        if 'browser' in locals():
-            browser.close()
-        if 'playwright' in locals():
-            playwright.stop()
-        return jsonify({"status": "error", "message": str(e)}), 500
+        await cleanup_session(session_id)
+        print(f"Error in thread {session_id}: {str(e)}")
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Define a Pydantic model for the POST request body
+class SyncRequest(BaseModel):
+    username: str
+    password: str
+
+@app.post("/perform-sync")
+async def perform_sync(sync_request: SyncRequest):
+    username = sync_request.username
+    password = sync_request.password
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Username and password are required")
+
+    session_id = base64.urlsafe_b64encode(username.encode()).decode()
+    await perform_sync_thread(session_id, username, password)
+    return JSONResponse({"status": "otp_check_started", "session_id": session_id})
+
+@app.get("/submit-otp")
+async def submit_otp(otp: str = Query(...), session_id: str = Query(...)):
+    if not otp or not session_id:
+        raise HTTPException(status_code=400, detail="OTP and session ID are required")
+
+    if session_id not in session_data:
+        raise HTTPException(status_code=404, detail="Invalid session ID")
+
+    # Check if OTP is required and thread is running
+    if session_data[session_id]['otp_required']:
+        try:
+            await session_data[session_id]["page"].fill('input[name="otp"]', otp)
+            await capture_screenshot(session_id)
+            await session_data[session_id]["page"].click('input[type="submit"]')
+            await capture_screenshot(session_id)
+            await wait_for_dashboard(session_data[session_id]["page"])
+            return await process_courses(session_id)
+        except Exception as e:
+            await cleanup_session(session_id)
+            return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+    else:
+        return JSONResponse({"status": "error", "message": "OTP not required or session expired"}, status_code=400)
+
+async def process_courses(session_id):
+    await navigate_to_main_courses_page(session_data[session_id]["page"])
+
+    html_content = await session_data[session_id]["page"].content()
+    courses = extract_courses(html_content)
+    print('Extracted Courses:', courses)
+
+    all_email_column_data = []
+    for course in courses:
+        try:
+            course_html_content, emails = await visit_course_page_and_scrape(session_data[session_id]["page"], course)
+            all_email_column_data.append({
+                'course_name': course['name'],
+                'course_ref_id': course['refId'],
+                'emails': emails
+            })
+        except Exception as e:
+            print(f"Error scraping course {course['name']}: {str(e)}")
+
+    await cleanup_session(session_id)
+    return JSONResponse({"status": "success", "data": all_email_column_data})
+
+@app.get("/screenshot")
+async def get_screenshot(session_id: str = Query(...)):
+    """Retrieve the latest screenshot for the given session ID."""
+    if session_id not in session_data or 'screenshot' not in session_data[session_id]:
+        raise HTTPException(status_code=404, detail="Screenshot not found for the provided session ID")
+
+    screenshot_data = session_data[session_id]['screenshot']
+    # Encode screenshot to base64 for returning as JSON
+    screenshot_base64 = base64.b64encode(screenshot_data).decode('utf-8')
+    return JSONResponse({"screenshot": f"data:image/png;base64,{screenshot_base64}"})
+
+
+async def cleanup_session(session_id):
+    if session_id in session_data:
+        await session_data[session_id]['page'].close()
+        await session_data[session_id]['browser'].close()
+        await session_data[session_id]['playwright'].stop()
+        del session_data[session_id]
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=5001)
