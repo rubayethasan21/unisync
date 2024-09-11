@@ -116,13 +116,13 @@ async def index(request: Request):
 
 @app.get("/sync", response_class=HTMLResponse)
 async def sync(request: Request):
-    response = send_data_to_matrix_server('demo_user_1', 'DemoRoom500')
+    """ response = send_data_to_matrix_server('demo_user_1', 'DemoRoom500')
     print('Response Status Code:', response.status_code, flush=True)
     print('Response Content:', response.text, flush=True)
     try:
         print('Response JSON Content:', response.json(), flush=True)
     except ValueError:
-        print('Response is not in JSON format', flush=True)
+        print('Response is not in JSON format', flush=True) """
     return templates.TemplateResponse("login.html", {"request": request})
 
 async def perform_sync_thread(session_id, username, password):
@@ -234,7 +234,6 @@ async def cleanup_session(session_id):
         await session_data[session_id]['playwright'].stop()
         del session_data[session_id]
 
-if __name__ == "__main__":
-    import uvicorn
+#if __name__ == "__main__":
+    #import uvicorn
     #uvicorn.run(app, host="0.0.0.0", port=5001)
-    uvicorn.run(app)
